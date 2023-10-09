@@ -3,17 +3,16 @@ const connection = require('../db');
 
 const usersList=(req = request,res=response)=>{
     try {
-        connection.connect(async(err)=>{
+        connection.connect((err)=>{
             if(err){
                 throw new Error(err);
             }else{
-                const users = await connection.execute('SELECT * FROM Users',(err)=>{
+                connection.execute('SELECT * FROM Users',(err,users)=>{
                     if(err){
                         throw new Error(err);
                     }
+                    res.json(users);
                 })
-
-                res.json(users);
             }
         })
     } catch (err) {
