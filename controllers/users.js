@@ -1,31 +1,26 @@
 const {request,response} = require('express');
-const connection = require('../db');
+const pool = require('../db');
+const usersModel = require('../models/users');
 
-const usersList=(req = request,res=response)=>{
+const usersList= async(req = request,res=response)=>{
+    let conn;
     try {
-        connection.connect((err)=>{
+        conn = await pool.getConnection();
+        
+        const users = await conn.query(usersModel.getAll,(err)=>{
             if(err){
-                throw new Error(err);
-            }else{
-                connection.execute('SELECT * FROM Users',(err,users)=>{
-                    if(err){
-                        throw new Error(err);
-                    }
-                    res.json(users);
-                })
+                throw new Error(err);    //si se encuentra la variable error llena se manda al catch
             }
         })
-    } catch (err) {
 
-        res.status(500).json({msg:"Error connection to MySQL database"});
+        res.json(users);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json(error);
         
     }finally{
-        connection.end();
+        if(conn) conn.end();
     }
-
-
-   
-
 }
 
 module.exports={usersList};
