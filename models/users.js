@@ -1,19 +1,49 @@
-const usersModel ={
-    getAll:`
+const usermodels = {
+    getAll: `
+    SELECT 
+    * 
+    FROM 
+    users`,
+    getByID: `
     SELECT
-        *
+    *
     FROM
-        users
-    `,
-
-    getByID:`
-    SELECT
-        *
-    FROM
-        users
+    users
     WHERE
-        id=?
-    `
+    id= ?
+    `,
+    addRow:`
+    INSERT INTO
+    users(
+        username,
+        email,
+        password,
+        name,
+        lastname,
+        phone_number,
+        role_id,
+        is_active
+    )
+    VALUES (
+        ?,?,?,?,?,?,?,?
+    )`,
 
-};
-module.exports=usersModel;
+    getByUsername:`
+    SELECT
+        id
+    FROM
+        users
+    WHERE 
+        username=?
+        `,
+    getByEmail:`
+    SELECT
+        id
+    FROM
+        users
+    WHERE 
+        email=?
+        `
+}
+
+module.exports=usermodels;
