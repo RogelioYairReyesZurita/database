@@ -43,7 +43,46 @@ const usermodels = {
         users
     WHERE 
         email=?
-        `
+        `,
+        
+    getActualUser:`
+    SELECT
+       id
+    FROM
+        users
+    WHERE
+        username=?
+    `,
+    getActualEmail:`
+    SELECT
+       id
+    FROM
+        users
+    WHERE
+        email=?
+    `,
+    
+    getActuData:`
+    UPDATE
+        users
+    SET
+        username = ?,
+        email = ?,
+        password = ?,
+        name = ?,
+        lastname = ?,
+        phone_number = ?,
+        role_id = ?,
+        is_active = ?
+    WHERE
+        id=?`,
+    deleteRow:`
+    UPDATE
+        users
+    SET
+        is_active=0
+    WHERE
+        id=?`
 }
 
 module.exports=usermodels;
