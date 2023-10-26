@@ -36,6 +36,14 @@ const usermodels = {
     WHERE 
         username=?
         `,
+    getByUsername2:`
+    SELECT
+        *
+    FROM
+        users
+    WHERE 
+        username=?
+        `,
     getByEmail:`
     SELECT
         id

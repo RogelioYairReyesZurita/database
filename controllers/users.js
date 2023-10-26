@@ -253,4 +253,44 @@ res.json({msg:'User updated successfully'})
         }
     }
 
-module.exports={listUsers, listUsersByID, addUser,ModUser,Deleteuser};
+    const signIn = async (req=request, res=response)=>{
+        const {username,password}=req.body;
+
+        let conn;
+        
+        if(!username||!password){
+            res.status(400).json({msg:'User and password are required'});
+            return;
+        }
+
+        
+
+        try {
+            conn=await pool.getConnection();
+            const[user]=await conn.query(
+                usermodels.getByUsername2,
+                [username],
+                (err)=>{if(err)throw err;}
+            )
+            if(!user||user.is_active===0){
+                res.status(404).json({msg:'Wrong username or password'});
+                return;
+            }
+            const passwordOk=bcrypt.compare(password,user.password);
+            if(!password){
+                res.status(404).json({msg:'Wrong username or password'})
+                return;
+            }
+            delete user.password;
+            delete user.created_at;
+            delete user.updated_at;
+            res.json(user);
+        } catch (error) {
+            console.log(error);
+            res.status(500).json(error)
+        }finally{
+            if(conn) conn.end();
+        }
+    }
+
+module.exports={listUsers, listUsersByID, addUser,ModUser,Deleteuser,signIn};
