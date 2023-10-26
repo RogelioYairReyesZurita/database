@@ -1,4 +1,5 @@
 const {request, response} = require('express');
+const bcrypt = require('bcrypt');
 const usermodels = require('../models/users');
 const pool=require('../db');
 
@@ -75,7 +76,10 @@ const addUser =async(req = request, res= response)=>{
 res.status(400).json({msg:'Missing informarion'});
 return;
         }
-        const user= [username, email, password, name, lastname, phone_number, role_id, is_active]
+        const saltRounds=10;
+        const passwordHash= await bcrypt.hash(password,saltRounds);
+
+        const user= [username, email, passwordHash, name, lastname, phone_number, role_id, is_active];
     
     try {
         conn = await pool.getConnection();
@@ -113,93 +117,102 @@ res.status(500).json(error);
 
 /////////////////////////////Modifica Usuario//////////////////////////////////////////////////
 
-const ModUser = async (req, res) => {
-    const { id } = req.params;
-    const DatosDeUsuario = req.body; // Actualizamos los datos
-  
-    if (!DatosDeUsuario || DatosDeUsuario=== 0) {
-      return res.status(400).json({ msg: 'No data provided for update' });
-    }
-    
-    let conn;
-    try {
-      conn = await pool.getConnection();
-  
-      //Aqui se verifica si el usuario esta verificado
-      const [IdUserYes] = await conn.query(usermodels.getByID, [id]);
-      if (!IdUserYes) {
-        return res.status(404).json({ msg: 'User not found' });
-      }
-  
-      // Realiza las validaciones necesarias, por ejemplo, que el correo o el nombre de usuario no estén en uso
-      
-      if (DatosDeUsuario.username) {
-        const [ChecaIdUser] = await conn.query(
-            usermodels.getActualUser,
-          [DatosDeUsuario.username]
-        );
-        if (ChecaIdUser && ChecaIdUser.id !== id) {
-          return res.status(409).json({ msg: 'Username already in use' });
-        }
-      }
-      if (DatosDeUsuario.email) {
-        const [ChecaEmailUser] = await conn.query(
-            usermodels.getActualEmail,
-          [DatosDeUsuario.email]
-        );
-        if (ChecaEmailUser && ChecaEmailUser.id !== id) {
-          return res.status(409).json({ msg: 'Email already in use' });
-        }
-      }
-  
-      // Realiza la actualización de los campos permitidos
-      const DatosUser = ['username', 'email', 'password', 'name', 'lastname', 'phone_number','role_id',"is_active"];
-      const updateData = {};
+const ModUser=async(req, res)=>{
+    const {
+        username,
+        email,
+        password,
+        name,
+        lastname,
+        phone_number,
+        role_id,
+        id_active,
+    } = req.body;
 
+const {id} = req.params;
 
-  
-      DatosUser.forEach((field) => {
-        if (DatosDeUsuario[field] !== undefined) {
-          updateData[field] = DatosDeUsuario[field];
-        }
-      });
-      
-      if (!updateData.username|| !updateData.email|| !updateData.password|| !updateData.name|| !updateData.lastname|| !updateData.role_id){
-        res.status(400).json({msg:'Missing informarion'});
-        return;}
-        
-      if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({ msg: 'No valid fields to update' });
-      }
-  
-      // Utiliza la consulta ModUser para realizar la actualización
-      const DatosActu = await conn.query(
-        usermodels.getActuData,
-        [
-          updateData.username,
-          updateData.email,
-          updateData.password, // Actualizar contraseña
-          updateData.name,
-          updateData.lastname,
-          updateData.phone_number,
-          updateData.role_id,
-          updateData.is_active,
-          id
-        ]
-      );
-  
-      if (DatosActu.affectedRows === 0) {
-        return res.status(500).json({ msg: 'Failed to update user' });
-      }
-      
-      return res.json({ msg: 'User updated successfully' });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json(error);
-    } finally {
-      if (conn) conn.end();
+let passwordHash;
+if(password){
+    const saltRounds=10;
+    passwordHash=await bcrypt.hash(password,saltRounds);
+}
+
+let newUserData=[
+    username,
+    email,
+    passwordHash,
+    name,
+    lastname,
+    phone_number,
+    role_id,
+    id_active   
+];
+let conn;
+try{
+    conn = await pool.getConnection();
+const [userExists]=await conn.query(
+    usermodels.getByID,
+    [id],
+    (err) => {if (err) throw err;}
+);
+if (!userExists || userExists.id_active === 0){
+    res.status(404).json({msg:'User not found'});
+    return;
+}
+
+const [usernameUser] = await conn.query(
+    usermodels.getByUsername,
+    [username],
+    (err) => {if (err) throw err;}
+);
+if (usernameUser){
+    res.status(409).json({msg:`User with username ${username} already exists`});
+    return;
+}
+
+const [emailUser] = await conn.query(
+    usermodels.getByEmail,
+    [email],
+    (err) => {if (err) throw err;}
+);
+if (emailUser){
+    res.status(409).json({msg:`User with email ${email} already exists`});
+    return;
+}
+
+const oldUserData = [
+    userExists.username,
+    userExists.email,
+    userExists.password,
+    userExists.name,
+    userExists.lastname,
+    userExists.phone_number,
+    userExists.role_id,
+    userExists.id_active  
+];
+
+newUserData.forEach((userData, index)=> {
+    if (!userData){
+        newUserData[index] = oldUserData[index];
     }
-  };
+})
+
+const userUpdate = await conn.query(
+    usermodels.getActuData,
+    [...newUserData, id],
+    (err) => {if (err) throw err;}
+);
+if(userUpdate.affecteRows === 0){
+    throw new Error ('User not updated');
+}
+res.json({msg:'User updated successfully'})
+}catch (error){
+        console.log(error);
+        res.status(500).json(error);
+    } finally{
+        if (conn) conn.end();
+    }
+}
 
 
 
